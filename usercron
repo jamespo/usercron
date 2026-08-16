@@ -29,7 +29,7 @@ usercron_install () {
 
     # build USERCRON entries file
     DATE=$(date)
-    echo "### USERCRON start $DATE" >> "$UC_CURR_CRON"
+    echo "### USERCRON start $DATE ###" >> "$UC_CURR_CRON"
 
     # loop round cron entries
     cd "$USERCRONHOME" || exit 1
@@ -46,7 +46,7 @@ usercron_install () {
 	fi
     done
 
-    echo "### USERCRON end" >> "$UC_CURR_CRON"
+    echo "### USERCRON end ###" >> "$UC_CURR_CRON"
 
     # overwrite existing crontab
     crontab "$UC_CURR_CRON" >/dev/null
