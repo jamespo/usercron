@@ -3,7 +3,7 @@
 # usercron - https://github.com/jamespo/usercron
 set -uo pipefail
 
-USAGE="usercron (help|install)"
+USAGE="usercron (help|install|edit <cronfile>)"
 
 USERCRONHOME=$HOME/.config/usercron
 UCCMD="${1:-help}"
@@ -59,6 +59,24 @@ usercron_install () {
     rm "$UC_CURR_CRON"
 }
 
+usercron_edit () {
+    uc_file="$1"
+    cd "$USERCRONHOME" || exit 1
+    $EDITOR "$uc_file"
+    crontab -T "$uc_file" 2>&1
+
+    CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
+    CRONTAB_CHECK=$?
+    if [[ $CRONTAB_CHECK -ne 0 ]]; then
+	# bad entry
+	echo "$CRONTAB_CHECK_TXT"
+	echo "Deleting $uc_file"
+	rm "$uc_file"
+    else
+	echo "Installing $uc_file"
+	usercron_install
+    fi
+}
 
 case "$UCCMD" in
     "help")
@@ -66,6 +84,14 @@ case "$UCCMD" in
 
     "install")
 	usercron_install ;;
+
+    "edit")
+	CRONFILE=${2:-}
+	if [[ -z "$CRONFILE" ]]; then
+	    echo "No cronfile specified"
+	    exit 1
+	fi
+	usercron_edit "$CRONFILE" ;;
 
     *)
 	echo "Usage: $USAGE" ;;
