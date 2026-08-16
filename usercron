@@ -15,36 +15,39 @@ fi
 
 
 usercron_install () {
+    UC_CURR_CRON=$(mktemp)
+
     FINDENTRIES=$(find "$USERCRONHOME" -type f -name '*.cron' | wc -l)
     if [[ $FINDENTRIES -eq 0 ]]; then
-	echo "No cron entries found, exiting"
-	exit 0
+	echo "No cron entries found"
     fi
-
-    UC_CURR_CRON=$(mktemp)
 
     # get current cron & remove USERCRON entries
     crontab -l 2>/dev/null > "$UC_CURR_CRON"
-    sed -i '/^### USERCRON start (.*) ###$/,/^### USERCRON end ###$/d' "$UC_CURR_CRON"
+    sed -i '/^### USERCRON start .* ###$/,/^### USERCRON end ###$/d' "$UC_CURR_CRON"
 
     # build USERCRON entries file
     DATE=$(date)
     echo "### USERCRON start $DATE ###" >> "$UC_CURR_CRON"
 
-    # loop round cron entries
-    cd "$USERCRONHOME" || exit 1
-    VALIDENTRIES=0
-    for uc_file in *.cron; do
-	CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
-	CRONTAB_CHECK=$?
-	if [[ $CRONTAB_CHECK -eq 0 ]]; then
-	    cat "$uc_file" >> "$UC_CURR_CRON"
-	    VALIDENTRIES=$((VALIDENTRIES+1))
-	else
-	    # bad entry
-	    echo -e "$CRONTAB_CHECK_TXT\n"
-	fi
-    done
+    if [[ $FINDENTRIES -gt 0 ]]; then
+	# loop round cron entries
+	cd "$USERCRONHOME" || exit 1
+	VALIDENTRIES=0
+	for uc_file in *.cron; do
+	    CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
+	    CRONTAB_CHECK=$?
+	    if [[ $CRONTAB_CHECK -eq 0 ]]; then
+		cat "$uc_file" >> "$UC_CURR_CRON"
+		VALIDENTRIES=$((VALIDENTRIES+1))
+	    else
+		# bad entry
+		echo -e "$CRONTAB_CHECK_TXT\n"
+	    fi
+	done
+    else
+	VALIDENTRIES=0
+    fi
 
     echo "### USERCRON end ###" >> "$UC_CURR_CRON"
 
