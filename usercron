@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# usercron - https://github.com/jamespo/usercron
+set -uo pipefail
+
+USAGE="usercron (help|install)"
+
+USERCRONHOME=$HOME/.config/usercron
+UCCMD="${1:-help}"
+
+if [[ ! -d "$USERCRONHOME" ]]; then
+    echo "$USERCRONHOME does not exist - exiting"
+    exit 1
+fi
+
+
+usercron_install () {
+    FINDENTRIES=$(find "$USERCRONHOME" -type f -name '*.cron' | wc -l)
+    if [[ $FINDENTRIES -eq 0 ]]; then
+	echo "No cron entries found, exiting"
+	exit 0
+    fi
+
+    UC_CURR_CRON=$(mktemp)
+
+    # get current cron & remove USERCRON entries
+    crontab -l 2>/dev/null > "$UC_CURR_CRON"
+    sed -i '/^### USERCRON start (.*) ###$/,/^### USERCRON end ###$/d' "$UC_CURR_CRON"
+
+    # build USERCRON entries file
+    DATE=$(date)
+    echo "### USERCRON start $DATE" > "$UC_CURR_CRON"
+
+    # loop round cron entries
+    cd "$USERCRONHOME" || exit 1
+    VALIDENTRIES=0
+    for uc_file in *.cron; do
+	CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
+	CRONTAB_CHECK=$?
+	if [[ $CRONTAB_CHECK -eq 0 ]]; then
+	    cat "$uc_file" >> "$UC_CURR_CRON"
+	    VALIDENTRIES=$((VALIDENTRIES+1))
+	else
+	    # bad entry
+	    echo -e "$CRONTAB_CHECK_TXT\n"
+	fi
+    done
+
+    echo "### USERCRON end" >> "$UC_CURR_CRON"
+
+    # overwrite existing crontab
+    crontab "$UC_CURR_CRON" >/dev/null
+
+    echo "crontab installed for $USER with $VALIDENTRIES entries from $USERCRONHOME"
+
+    rm "$UC_CURR_CRON"
+}
+
+
+case "$UCCMD" in
+    "help")
+	echo "Usage: $USAGE" ;;
+
+    "install")
+	usercron_install ;;
+
+    *)
+	echo "Usage: $USAGE" ;;
+esac
+
+exit 0
