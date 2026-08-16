@@ -13,6 +13,20 @@ if [[ ! -d "$USERCRONHOME" ]]; then
     exit 1
 fi
 
+# distro specific flags
+OSUNAME=$(grep -E "^NAME=" /etc/*-release)
+if [[ "$OSUNAME" =~ 'Debian' ]]; then
+    CRONTESTCMD='crontab'
+    CRONTESTFLAG='-n'
+elif [[ "$OSUNAME" =~ 'Arch' ]]; then
+    # cronie (arch)
+    CRONTESTCMD='crontab'    
+    CRONTESTFLAG='-T'
+else
+    # dummy check
+    CRONTESTCMD='true'
+    CRONTESTFLAG=''
+fi
 
 usercron_install () {
     UC_CURR_CRON=$(mktemp)
@@ -35,7 +49,7 @@ usercron_install () {
 	cd "$USERCRONHOME" || exit 1
 	VALIDENTRIES=0
 	for uc_file in *.cron; do
-	    CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
+	    CRONTAB_CHECK_TXT=$("$CRONTESTCMD" "$CRONTESTFLAG" "$uc_file" 2>&1)
 	    CRONTAB_CHECK=$?
 	    if [[ $CRONTAB_CHECK -eq 0 ]]; then
 		cat "$uc_file" >> "$UC_CURR_CRON"
@@ -63,9 +77,8 @@ usercron_edit () {
     uc_file="$1"
     cd "$USERCRONHOME" || exit 1
     $EDITOR "$uc_file"
-    crontab -T "$uc_file" 2>&1
 
-    CRONTAB_CHECK_TXT=$(crontab -T "$uc_file" 2>&1)
+    CRONTAB_CHECK_TXT=$("$CRONTESTCMD" "$CRONTESTFLAG" "$uc_file" 2>&1)
     CRONTAB_CHECK=$?
     if [[ $CRONTAB_CHECK -ne 0 ]]; then
 	# bad entry
