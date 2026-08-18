@@ -8,13 +8,17 @@ USAGE="usercron (help|install|edit <cronfile>)"
 USERCRONHOME=$HOME/.config/usercron
 UCCMD="${1:-help}"
 
-if [[ ! -d "$USERCRONHOME" ]]; then
-    echo "$USERCRONHOME does not exist - exiting"
-    exit 1
-fi
+test_crondir() {
+    if [[ ! -d "$USERCRONHOME" ]]; then
+	echo "$USERCRONHOME does not exist - exiting"
+	exit 1
+    fi
+}
 
 # distro specific flags
 OSUNAME=$(grep -E "^NAME=" /etc/*-release)
+
+# Check for crontab test support
 if [[ "$OSUNAME" =~ 'Debian' ]]; then
     CRONTESTCMD='crontab'
     CRONTESTFLAG='-n'
@@ -22,8 +26,16 @@ elif [[ "$OSUNAME" =~ 'Arch' ]]; then
     # cronie (arch)
     CRONTESTCMD='crontab'    
     CRONTESTFLAG='-T'
-else
-    # dummy check
+elif [[ -f /etc/redhat-release ]]; then
+    # check major version > 8
+    major=$(grep -oP '(?<=release )\d+' /etc/redhat-release)
+    if [[ $major -gt 8 ]]; then
+	CRONTESTCMD='crontab'
+	CRONTESTFLAG='-T'
+    fi
+fi
+if [[ -z "$CRONTESTCMD" ]]; then
+    # fallback - dummy check
     CRONTESTCMD='true'
     CRONTESTFLAG=''
 fi
@@ -75,8 +87,10 @@ usercron_install () {
 
 usercron_edit () {
     uc_file="$1"
+
+    mkdir -p "$USERCRONHOME" && chmod 700 "$USERCRONHOME"
     cd "$USERCRONHOME" || exit 1
-    $EDITOR "$uc_file"
+    ${EDITOR:-vi} "$uc_file"
 
     CRONTAB_CHECK_TXT=$("$CRONTESTCMD" "$CRONTESTFLAG" "$uc_file" 2>&1)
     CRONTAB_CHECK=$?
@@ -96,6 +110,7 @@ case "$UCCMD" in
 	echo "Usage: $USAGE" ;;
 
     "install")
+	test_crondir
 	usercron_install ;;
 
     "edit")
