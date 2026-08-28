@@ -17,12 +17,17 @@ test_crondir() {
 
 # distro specific flags
 OSUNAME=$(grep -E "^NAME=" /etc/*-release)
+OSIDLIKE=$(grep -E "^ID_LIKE=" /etc/*-release)
 
 # Check for crontab test support
-if [[ "$OSUNAME" =~ 'Debian' ]]; then
+# fallback - dummy check
+CRONTESTCMD='true'
+CRONTESTFLAG=''
+shopt -s nocasematch
+if [[ "$OSUNAME $OSIDLIKE" =~ 'Debian' ]]; then
     CRONTESTCMD='crontab'
     CRONTESTFLAG='-n'
-elif [[ "$OSUNAME" =~ 'Arch' ]]; then
+elif [[ "$OSUNAME $OSIDLIKE" =~ 'Arch' ]]; then
     # cronie (arch)
     CRONTESTCMD='crontab'    
     CRONTESTFLAG='-T'
@@ -34,11 +39,8 @@ elif [[ -f /etc/redhat-release ]]; then
 	CRONTESTFLAG='-T'
     fi
 fi
-if [[ -z "$CRONTESTCMD" ]]; then
-    # fallback - dummy check
-    CRONTESTCMD='true'
-    CRONTESTFLAG=''
-fi
+shopt -u nocasematch
+
 
 usercron_install () {
     UC_CURR_CRON=$(mktemp)
