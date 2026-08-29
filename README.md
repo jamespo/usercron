@@ -8,7 +8,8 @@ single monolithic file edited via `crontab -e`. Each file is validated
 before install, so a typo in one job can't break the rest of your crontab.
 
 > **Note:** usercron itself is hand-written, not AI-generated. This README,
-> however, was written with AI assistance.
+> however, was written with AI assistance. Because I don't get paid for this
+> and writing documentation is boring!
 
 ## How it works
 
